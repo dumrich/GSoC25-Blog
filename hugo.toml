@@ -53,3 +53,4 @@ theme = 'terminal'
 [caches]
   [caches.images]
     dir = ':cacheDir/images'
+
