@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Git on GSoC 25: Roadmap</title>
-    <link>http://localhost:1313/tags/git/</link>
+    <link>//localhost:60509/tags/git/</link>
     <description>Recent content in Git on GSoC 25: Roadmap</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 13 May 2025 09:34:58 -0400</lastBuildDate><atom:link href="http://localhost:1313/tags/git/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 13 May 2025 09:34:58 -0400</lastBuildDate><atom:link href="//localhost:60509/tags/git/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Git Fundamentals</title>
-      <link>http://localhost:1313/posts/git-fundamentals/</link>
+      <link>//localhost:60509/posts/git-fundamentals/</link>
       <pubDate>Tue, 13 May 2025 09:34:58 -0400</pubDate>
       
-      <guid>http://localhost:1313/posts/git-fundamentals/</guid>
+      <guid>//localhost:60509/posts/git-fundamentals/</guid>
       <description>&lt;p&gt;Simple cheatsheet for me to get started tracking freebsd and making changes to the codebase. Requirements: &lt;code&gt;git&lt;/code&gt;, &lt;code&gt;git arc&lt;/code&gt;&lt;/p&gt;
 &lt;h2 id=&#34;tracking-the-source-tree&#34;&gt;Tracking the Source Tree&lt;/h2&gt;
 &lt;h3 id=&#34;copy-local-repository&#34;&gt;Copy local repository&lt;/h3&gt;

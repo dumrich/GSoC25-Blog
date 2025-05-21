@@ -2,51 +2,51 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost:1313/</loc>
+    <loc>//localhost:60509/</loc>
     <lastmod>2025-05-18T13:14:09-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/qemu-accel/</loc>
+    <loc>//localhost:60509/posts/qemu-accel/</loc>
     <lastmod>2025-05-18T13:14:09-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/nvmm/</loc>
+    <loc>//localhost:60509/tags/nvmm/</loc>
     <lastmod>2025-05-18T13:14:09-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/</loc>
+    <loc>//localhost:60509/posts/</loc>
     <lastmod>2025-05-18T13:14:09-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/qemu/</loc>
+    <loc>//localhost:60509/tags/qemu/</loc>
     <lastmod>2025-05-18T13:14:09-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/</loc>
+    <loc>//localhost:60509/tags/</loc>
     <lastmod>2025-05-18T13:14:09-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/bhyve/</loc>
+    <loc>//localhost:60509/tags/bhyve/</loc>
     <lastmod>2025-05-15T14:22:03-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/bhyve-part-3/</loc>
+    <loc>//localhost:60509/posts/bhyve-part-3/</loc>
     <lastmod>2025-05-15T14:22:03-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/freebsd/</loc>
+    <loc>//localhost:60509/tags/freebsd/</loc>
     <lastmod>2025-05-15T14:22:03-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/bhyve-part-2/</loc>
+    <loc>//localhost:60509/posts/bhyve-part-2/</loc>
     <lastmod>2025-05-15T11:58:06-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/virtualization/</loc>
+    <loc>//localhost:60509/tags/virtualization/</loc>
     <lastmod>2025-05-13T10:10:25-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/virtualization-fundamentals/</loc>
+    <loc>//localhost:60509/posts/virtualization-fundamentals/</loc>
     <lastmod>2025-05-13T10:10:25-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/git/</loc>
+    <loc>//localhost:60509/tags/git/</loc>
     <lastmod>2025-05-13T09:34:58-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/git-fundamentals/</loc>
+    <loc>//localhost:60509/posts/git-fundamentals/</loc>
     <lastmod>2025-05-13T09:34:58-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/bhyve-part-1/</loc>
+    <loc>//localhost:60509/posts/bhyve-part-1/</loc>
     <lastmod>2025-05-13T09:33:23-04:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/categories/</loc>
+    <loc>//localhost:60509/categories/</loc>
   </url>
 </urlset>

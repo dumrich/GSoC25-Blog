@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Virtualization on GSoC 25: Roadmap</title>
-    <link>http://localhost:1313/tags/virtualization/</link>
+    <link>//localhost:60509/tags/virtualization/</link>
     <description>Recent content in Virtualization on GSoC 25: Roadmap</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 13 May 2025 10:10:25 -0400</lastBuildDate><atom:link href="http://localhost:1313/tags/virtualization/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 13 May 2025 10:10:25 -0400</lastBuildDate><atom:link href="//localhost:60509/tags/virtualization/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Virtualization Basics</title>
-      <link>http://localhost:1313/posts/virtualization-fundamentals/</link>
+      <link>//localhost:60509/posts/virtualization-fundamentals/</link>
       <pubDate>Tue, 13 May 2025 10:10:25 -0400</pubDate>
       
-      <guid>http://localhost:1313/posts/virtualization-fundamentals/</guid>
+      <guid>//localhost:60509/posts/virtualization-fundamentals/</guid>
       <description>&lt;p&gt;Virtualization allows for the multiplexing of different operating systems on the same hardware. This allows for better utilization of system resources and greater flexibility, enabling common processes such as cloud computing.&lt;/p&gt;
 &lt;h2 id=&#34;virtual-machine-monitors-vmm&#34;&gt;Virtual Machine Monitors (VMM)&lt;/h2&gt;
 &lt;p&gt;A VMM, or a hypervisor, is at the heart of system virtualization. A VMM allows multiple virtual machines to run on a physical machine, much like an operating system allows multiple processes to run on a CPU.&lt;/p&gt;</description>
@@ -20,11 +20,11 @@
 &lt;h2 id=&#34;virtual-machine-monitors-vmm&#34;&gt;Virtual Machine Monitors (VMM)&lt;/h2&gt;
 &lt;p&gt;A VMM, or a hypervisor, is at the heart of system virtualization. A VMM allows multiple virtual machines to run on a physical machine, much like an operating system allows multiple processes to run on a CPU.&lt;/p&gt;
 &lt;p&gt;A VMM performs a &amp;ldquo;machine switch&amp;rdquo;, which is the analog of an operating system context switch.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;http://localhost:1313/images/virtualization/VMM.png&#34; alt=&#34;VMM&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;//localhost:60509/images/virtualization/VMM.png&#34; alt=&#34;VMM&#34;&gt;&lt;/p&gt;
 &lt;p&gt;There are some problems in this analogy, however. In a virtual machine, the guest OS expects unrestricted access to hardware (like running privileged instructions). Additionally, a single guest cannot get access to all resources of the machine. Thus, VMMs are designed with special considerations.&lt;/p&gt;
 &lt;h3 id=&#34;trap-and-emulate&#34;&gt;Trap and Emulate&lt;/h3&gt;
 &lt;p&gt;User proccesses run in ring 3, OS runs in ring 0. Privileged instructions only run in ring 0. What if the guest OS runs in ring 1, and traps to the VMM in ring 0?&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;http://localhost:1313/images/virtualization/VMM.png&#34; alt=&#34;Trap and Emulate&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;//localhost:60509/images/virtualization/VMM.png&#34; alt=&#34;Trap and Emulate&#34;&gt;&lt;/p&gt;
 &lt;p&gt;If the guest:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
@@ -40,7 +40,7 @@
 &lt;h3 id=&#34;hardware-assisted-virtualization&#34;&gt;Hardware assisted virtualization&lt;/h3&gt;
 &lt;p&gt;The most common type of virtualization today (used by KVM/QEMU) is hardware assisted virtualization. With this method, the CPU has a special VMX mode of execution.&lt;/p&gt;
 &lt;p&gt;With VMX, x86 has 4 rings on non-VMX root mode, and 4 rings in VMX mode. The VMM enters VMX mode to run the guest OS in a ring 0 (albeit a less powerful VMX ring 0).&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;http://localhost:1313/images/virtualization/HardwareVirtualization.png&#34; alt=&#34;Hardware Virtualization&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;//localhost:60509/images/virtualization/HardwareVirtualization.png&#34; alt=&#34;Hardware Virtualization&#34;&gt;&lt;/p&gt;
 &lt;h3 id=&#34;kvmqemu-architecture&#34;&gt;KVM/QEMU Architecture&lt;/h3&gt;
 &lt;p&gt;When the underlying processor supports &lt;code&gt;Intel VT-X&lt;/code&gt; or &lt;code&gt;AMD-V&lt;/code&gt;, we can use hardware-assisted virtualization.&lt;/p&gt;
 &lt;p&gt;QEMU is a regular userspace process, that communicates with KVM via  &lt;code&gt;/dev/kvm&lt;/code&gt; device &lt;code&gt;ioctls&lt;/code&gt;.&lt;/p&gt;
@@ -74,7 +74,7 @@
 &lt;/ul&gt;
 &lt;p&gt;CPU switches context between host OS and guest OS. During the mode switch, CPU context is stored in the VMCS (VM control structure).&lt;/p&gt;
 &lt;p&gt;VMCS stores the state of the guest, state of the host, and control fields that dictate how a VM operates. Each vCPU has its own VMCS managed by the hypervisor. This allows the system to easily switch between guest and host state.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;http://localhost:1313/images/virtualization/qemuKVM2.png&#34; alt=&#34;Qemu &amp;#43; KVM&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;//localhost:60509/images/virtualization/qemuKVM2.png&#34; alt=&#34;Qemu &amp;#43; KVM&#34;&gt;&lt;/p&gt;
 &lt;h2 id=&#34;memory-virtualization&#34;&gt;Memory Virtualization&lt;/h2&gt;
 &lt;p&gt;Typically, the guest page table has a Guest Virtual Address (GVA) -&amp;gt; Guest Physical Address (GPA) via its page table. Then, the VMM features an additional layer of indirection through the GPA-&amp;gt;Host Physical Address (HPA) mapping.&lt;/p&gt;
 &lt;p&gt;Therefore, the guest&amp;rsquo;s &amp;ldquo;RAM&amp;rdquo; pages are distributed across host memory. With Extended Page Tables support (EPT), we can allow the system to walk two separate page tables for address translation.&lt;/p&gt;

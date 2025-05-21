@@ -1,7 +1,7 @@
-baseURL = 'https://dumrich.codeberg.page/'
+baseURL = 'localhost'
 languageCode = 'en-us'
 title = 'GSoC 25: Roadmap'
-theme = 'terminal'
+theme = 're-terminal'
 
 [params]
   # dir name of your main content (default is `content/posts`).
@@ -35,8 +35,8 @@ theme = 'terminal'
 [languages]
   [languages.en.params]
     languageName = "English"
-    title = "re-Terminal"
-    subtitle = "A simple, retro theme for Hugo"
+    title = "GSoC25"
+    subtitle = "A summary of my work to bridge Bhyve and Qemu"
     owner = ""
     keywords = ""
     copyright = ""
@@ -53,4 +53,3 @@ theme = 'terminal'
 [caches]
   [caches.images]
     dir = ':cacheDir/images'
-

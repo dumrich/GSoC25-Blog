@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Bhyve on GSoC 25: Roadmap</title>
-    <link>http://localhost:1313/tags/bhyve/</link>
+    <link>//localhost:60509/tags/bhyve/</link>
     <description>Recent content in Bhyve on GSoC 25: Roadmap</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Thu, 15 May 2025 14:22:03 -0400</lastBuildDate><atom:link href="http://localhost:1313/tags/bhyve/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 15 May 2025 14:22:03 -0400</lastBuildDate><atom:link href="//localhost:60509/tags/bhyve/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Bhyve Part 3</title>
-      <link>http://localhost:1313/posts/bhyve-part-3/</link>
+      <link>//localhost:60509/posts/bhyve-part-3/</link>
       <pubDate>Thu, 15 May 2025 14:22:03 -0400</pubDate>
       
-      <guid>http://localhost:1313/posts/bhyve-part-3/</guid>
+      <guid>//localhost:60509/posts/bhyve-part-3/</guid>
       <description>&lt;p&gt;At this point, we&amp;rsquo;re ready to initialize the machine by starting all the vCPUs:&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-C&#34; data-lang=&#34;C&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; (&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; vcpuid &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;; vcpuid &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt; guest_ncpus; vcpuid&lt;span style=&#34;color:#f92672&#34;&gt;++&lt;/span&gt;)
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;		&lt;span style=&#34;color:#a6e22e&#34;&gt;bhyve_start_vcpu&lt;/span&gt;(vcpu_info[vcpuid].vcpu, vcpuid &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; BSP);
@@ -154,10 +154,10 @@
     
     <item>
       <title>Bhyve Part 2</title>
-      <link>http://localhost:1313/posts/bhyve-part-2/</link>
+      <link>//localhost:60509/posts/bhyve-part-2/</link>
       <pubDate>Thu, 15 May 2025 11:58:06 -0400</pubDate>
       
-      <guid>http://localhost:1313/posts/bhyve-part-2/</guid>
+      <guid>//localhost:60509/posts/bhyve-part-2/</guid>
       <description>&lt;h2 id=&#34;initializing-the-platform&#34;&gt;Initializing the Platform&lt;/h2&gt;
 &lt;p&gt;Next, Bhyve initializes the rest of the hardware with the bootstrap processor:&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-C&#34; data-lang=&#34;C&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;bhyve_init_platform&lt;/span&gt;(ctx, bsp) &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;)
@@ -498,10 +498,10 @@ Kernel issues a read to an AHCI disk. Virtual AHCI controller completes the I/O 
     
     <item>
       <title>Bhyve Part 1</title>
-      <link>http://localhost:1313/posts/bhyve-part-1/</link>
+      <link>//localhost:60509/posts/bhyve-part-1/</link>
       <pubDate>Tue, 13 May 2025 09:33:23 -0400</pubDate>
       
-      <guid>http://localhost:1313/posts/bhyve-part-1/</guid>
+      <guid>//localhost:60509/posts/bhyve-part-1/</guid>
       <description>&lt;h2 id=&#34;using-bhyve-and-bhyve-firmware&#34;&gt;Using Bhyve and &lt;code&gt;bhyve-firmware&lt;/code&gt;&lt;/h2&gt;
 &lt;p&gt;Ensure &lt;code&gt;vmm.ko&lt;/code&gt; is loaded and &lt;code&gt;bhyve-firmware&lt;/code&gt; is installed:&lt;/p&gt;
 &lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;# kldstat -m vmm

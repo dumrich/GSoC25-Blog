@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>NVMM on GSoC 25: Roadmap</title>
-    <link>http://localhost:1313/tags/nvmm/</link>
+    <link>//localhost:60509/tags/nvmm/</link>
     <description>Recent content in NVMM on GSoC 25: Roadmap</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 18 May 2025 13:14:09 -0400</lastBuildDate><atom:link href="http://localhost:1313/tags/nvmm/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 18 May 2025 13:14:09 -0400</lastBuildDate><atom:link href="//localhost:60509/tags/nvmm/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>How a QEMU Accelerator works</title>
-      <link>http://localhost:1313/posts/qemu-accel/</link>
+      <link>//localhost:60509/posts/qemu-accel/</link>
       <pubDate>Sun, 18 May 2025 13:14:09 -0400</pubDate>
       
-      <guid>http://localhost:1313/posts/qemu-accel/</guid>
+      <guid>//localhost:60509/posts/qemu-accel/</guid>
       <description>&lt;p&gt;Qemu has a modular accelerator framework that is made of two components:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;code&gt;AccelClass&lt;/code&gt;: The base accelerator capabilities&lt;/li&gt;
