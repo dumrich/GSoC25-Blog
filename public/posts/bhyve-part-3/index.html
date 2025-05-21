@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  
+    <title>Bhyve Part 3 :: GSoC 25: Roadmap</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Machine Initialization Routines in Bhyve" />
+<meta name="keywords" content=", " />
+
+  <meta name="robots" content="noodp" />
+
+<link rel="canonical" href="http://localhost:1313/posts/bhyve-part-3/" />
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  <link rel="stylesheet" href="http://localhost:1313/styles.css">
+
+
+
+
+
+
+
+  <link rel="shortcut icon" href="http://localhost:1313/img/theme-colors/orange.png">
+  <link rel="apple-touch-icon" href="http://localhost:1313/img/theme-colors/orange.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Bhyve Part 3">
+<meta property="og:description" content="Machine Initialization Routines in Bhyve" />
+<meta property="og:url" content="http://localhost:1313/posts/bhyve-part-3/" />
+<meta property="og:site_name" content="GSoC 25: Roadmap" />
+
+  
+  
+  <meta property="og:image" content="http://localhost:1313/">
+
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+
+
+  <meta property="article:published_time" content="2025-05-15 14:22:03 -0400 EDT" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+</head>
+<body class="orange">
+
+
+
+
+<div class="container headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="http://localhost:1313/">
+  <div class="logo">
+    re-Terminal
+  </div>
+</a>
+
+    </div>
+    
+    
+  </div>
+  
+</header>
+
+
+  <div class="content">
+    
+<article class="post">
+  <h1 class="post-title">
+    <a href="http://localhost:1313/posts/bhyve-part-3/">Bhyve Part 3</a>
+  </h1>
+  <div class="post-meta"><time class="post-date">2025-05-15</time><span class="post-author">Abhinav Chavali</span>
+    
+</div>
+
+  
+    <span class="post-tags">
+      
+      #<a href="http://localhost:1313/tags/bhyve/">Bhyve</a>&nbsp;
+      
+      #<a href="http://localhost:1313/tags/freebsd/">FreeBSD</a>&nbsp;
+      
+    </span>
+  
+  
+
+
+
+  
+    <div class="table-of-contents">
+      <h2>
+        Table of Contents
+      </h2>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#start-vcpus">Start vCPUs</a></li>
+    <li><a href="#pci-device-walkthrough">PCI device walkthrough</a></li>
+  </ul>
+</nav>
+    </div>
+  
+
+  <div class="post-content"><div>
+        <p>At this point, we&rsquo;re ready to initialize the machine by starting all the vCPUs:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> vcpuid <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; vcpuid <span style="color:#f92672">&lt;</span> guest_ncpus; vcpuid<span style="color:#f92672">++</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">bhyve_start_vcpu</span>(vcpu_info[vcpuid].vcpu, vcpuid <span style="color:#f92672">==</span> BSP);
+</span></span></code></pre></div><h2 id="start-vcpus">Start vCPUs<a href="#start-vcpus" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">bhyve_start_vcpu</span>(<span style="color:#66d9ef">struct</span> vcpu <span style="color:#f92672">*</span>vcpu, <span style="color:#66d9ef">bool</span> bsp)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> error;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (bsp) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">bootrom_boot</span>()) {
+</span></span><span style="display:flex;"><span>			error <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_set_capability</span>(vcpu,
+</span></span><span style="display:flex;"><span>			    VM_CAP_UNRESTRICTED_GUEST, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> (error <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">err</span>(<span style="color:#ae81ff">4</span>, <span style="color:#e6db74">&#34;ROM boot failed: unrestricted guest &#34;</span>
+</span></span><span style="display:flex;"><span>				    <span style="color:#e6db74">&#34;capability not available&#34;</span>);
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			error <span style="color:#f92672">=</span> <span style="color:#a6e22e">vcpu_reset</span>(vcpu);
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">assert</span>(error <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">bhyve_init_vcpu</span>(vcpu);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		 * Enable the &#39;unrestricted guest&#39; mode for APs.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		 *
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		 * APs startup in power-on 16-bit mode.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		 */</span>
+</span></span><span style="display:flex;"><span>		error <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_set_capability</span>(vcpu, VM_CAP_UNRESTRICTED_GUEST, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">assert</span>(error <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fbsdrun_addcpu</span>(<span style="color:#a6e22e">vcpu_id</span>(vcpu));
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The bootstrap processor is started first. If the guest is being booted with a bootrom, the UNRESTRICTED_GUEST capability is set, and the vcpu is reset. Non bootsstrap processors are just now initialized.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">fbsdrun_addcpu</span>(<span style="color:#66d9ef">int</span> vcpuid)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> vcpu_info <span style="color:#f92672">*</span>vi;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">pthread_t</span> thr;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> error;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	vi <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>vcpu_info[vcpuid];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	error <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_activate_cpu</span>(vi<span style="color:#f92672">-&gt;</span>vcpu);
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (error <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">err</span>(EX_OSERR, <span style="color:#e6db74">&#34;could not activate CPU %d&#34;</span>, vi<span style="color:#f92672">-&gt;</span>vcpuid);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">CPU_SET_ATOMIC</span>(vcpuid, <span style="color:#f92672">&amp;</span>cpumask);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	error <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_suspend_cpu</span>(vi<span style="color:#f92672">-&gt;</span>vcpu);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">assert</span>(error <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	error <span style="color:#f92672">=</span> <span style="color:#a6e22e">pthread_create</span>(<span style="color:#f92672">&amp;</span>thr, NULL, fbsdrun_start_thread, vi);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">assert</span>(error <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The thread function is what calls the <code>libvmmapi</code> <code>vm_loop</code> in each thread.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">vm_loop</span>(<span style="color:#66d9ef">struct</span> vmctx <span style="color:#f92672">*</span>ctx, <span style="color:#66d9ef">struct</span> vcpu <span style="color:#f92672">*</span>vcpu)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> vm_exit vme;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> vm_run vmrun;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> error, rc;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">enum</span> vm_exitcode exitcode;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">cpuset_t</span> active_cpus, dmask;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	error <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_active_cpus</span>(ctx, <span style="color:#f92672">&amp;</span>active_cpus);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">assert</span>(<span style="color:#a6e22e">CPU_ISSET</span>(<span style="color:#a6e22e">vcpu_id</span>(vcpu), <span style="color:#f92672">&amp;</span>active_cpus));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	vmrun.vm_exit <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>vme;
+</span></span><span style="display:flex;"><span>	vmrun.cpuset <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>dmask;
+</span></span><span style="display:flex;"><span>	vmrun.cpusetsize <span style="color:#f92672">=</span> <span style="color:#66d9ef">sizeof</span>(dmask);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">while</span> (<span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>		error <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_run</span>(vcpu, <span style="color:#f92672">&amp;</span>vmrun);
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> (error <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		exitcode <span style="color:#f92672">=</span> vme.exitcode;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> (exitcode <span style="color:#f92672">&gt;=</span> VM_EXITCODE_MAX <span style="color:#f92672">||</span>
+</span></span><span style="display:flex;"><span>		    vmexit_handlers[exitcode] <span style="color:#f92672">==</span> NULL) {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">warnx</span>(<span style="color:#e6db74">&#34;vm_loop: unexpected exitcode 0x%x&#34;</span>, exitcode);
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">exit</span>(<span style="color:#ae81ff">4</span>);
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		rc <span style="color:#f92672">=</span> (<span style="color:#f92672">*</span>vmexit_handlers[exitcode])(ctx, vcpu, <span style="color:#f92672">&amp;</span>vmrun);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">switch</span> (rc) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> VMEXIT_CONTINUE:
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> VMEXIT_ABORT:
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">abort</span>();
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">exit</span>(<span style="color:#ae81ff">4</span>);
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">EPRINTLN</span>(<span style="color:#e6db74">&#34;vm_run error %d, errno %d&#34;</span>, error, errno);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This is a pretty basic virtualization workflow. The vCPU is set to run until a vmexit occurs. The vmexit is then sent to the handler, which repeats the process.</p>
+<h2 id="pci-device-walkthrough">PCI device walkthrough<a href="#pci-device-walkthrough" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>It&rsquo;s useful to see how the lifecycle of a device in Bhyve as well</p>
+
+      </div></div>
+
+  
+    
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        <span class="button previous">
+            <a href="http://localhost:1313/posts/qemu-accel/">
+                <span class="button__icon">←</span>
+                <span class="button__text">How a QEMU Accelerator works</span>
+            </a>
+        </span>
+        
+        
+        <span class="button next">
+            <a href="http://localhost:1313/posts/bhyve-part-2/">
+                <span class="button__text">Bhyve Part 2</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+    
+
+  
+</article>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright">
+        <span>© 2025 Powered by <a href="https://gohugo.io">Hugo</a></span>
+    
+      <span>:: <a href="https://github.com/mirus-ua/hugo-theme-re-terminal" target="_blank">Theme</a> made by <a href="https://github.com/mirus-ua" target="_blank">Mirus</a></span>
+      </div>
+  </div>
+</footer>
+
+
+
+
+
+
+<script type="text/javascript" src="/bundle.min.js"></script>
+
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

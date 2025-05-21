@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  
+    <title>How a QEMU Accelerator works :: GSoC 25: Roadmap</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Inside the NVMM accelerator for QEMU" />
+<meta name="keywords" content="Qemu, nvmm" />
+
+  <meta name="robots" content="noodp" />
+
+<link rel="canonical" href="http://localhost:1313/posts/qemu-accel/" />
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  <link rel="stylesheet" href="http://localhost:1313/styles.css">
+
+
+
+
+
+
+
+  <link rel="shortcut icon" href="http://localhost:1313/img/theme-colors/orange.png">
+  <link rel="apple-touch-icon" href="http://localhost:1313/img/theme-colors/orange.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="How a QEMU Accelerator works">
+<meta property="og:description" content="Inside the NVMM accelerator for QEMU" />
+<meta property="og:url" content="http://localhost:1313/posts/qemu-accel/" />
+<meta property="og:site_name" content="GSoC 25: Roadmap" />
+
+  
+  
+  <meta property="og:image" content="http://localhost:1313/">
+
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+
+
+  <meta property="article:published_time" content="2025-05-18 13:14:09 -0400 EDT" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+</head>
+<body class="orange">
+
+
+
+
+<div class="container headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="http://localhost:1313/">
+  <div class="logo">
+    re-Terminal
+  </div>
+</a>
+
+    </div>
+    
+    
+  </div>
+  
+</header>
+
+
+  <div class="content">
+    
+<article class="post">
+  <h1 class="post-title">
+    <a href="http://localhost:1313/posts/qemu-accel/">How a QEMU Accelerator works</a>
+  </h1>
+  <div class="post-meta"><time class="post-date">2025-05-18</time><span class="post-author">Abhinav Chavali</span>
+    
+</div>
+
+  
+    <span class="post-tags">
+      
+      #<a href="http://localhost:1313/tags/qemu/">QEMU</a>&nbsp;
+      
+      #<a href="http://localhost:1313/tags/nvmm/">NVMM</a>&nbsp;
+      
+    </span>
+  
+  
+
+
+
+  
+
+  <div class="post-content"><div>
+        <p>Qemu has a modular accelerator framework that is made of two components:</p>
+<ul>
+<li><code>AccelClass</code>: The base accelerator capabilities</li>
+<li><code>AccelOpsClass</code>: CPU specific operations for the accelerator</li>
+</ul>
+<h2 id="type-registration">Type Registration<a href="#type-registration" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>These two types are initiated in <code>target/i386/nvmm/nvmm-all.c</code> and <code>target/i386/nvmm/nvmm-accel-ops.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nvmm_accel_class_init</span>(ObjectClass <span style="color:#f92672">*</span>oc, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>data)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    AccelClass <span style="color:#f92672">*</span>ac <span style="color:#f92672">=</span> <span style="color:#a6e22e">ACCEL_CLASS</span>(oc);
+</span></span><span style="display:flex;"><span>    ac<span style="color:#f92672">-&gt;</span>name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;NVMM&#34;</span>;
+</span></span><span style="display:flex;"><span>    ac<span style="color:#f92672">-&gt;</span>init_machine <span style="color:#f92672">=</span> nvmm_accel_init;
+</span></span><span style="display:flex;"><span>    ac<span style="color:#f92672">-&gt;</span>allowed <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>nvmm_allowed;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">const</span> TypeInfo nvmm_accel_type <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    .name <span style="color:#f92672">=</span> <span style="color:#a6e22e">ACCEL_CLASS_NAME</span>(<span style="color:#e6db74">&#34;nvmm&#34;</span>),
+</span></span><span style="display:flex;"><span>    .parent <span style="color:#f92672">=</span> TYPE_ACCEL,
+</span></span><span style="display:flex;"><span>    .class_init <span style="color:#f92672">=</span> nvmm_accel_class_init,
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nvmm_type_init</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">type_register_static</span>(<span style="color:#f92672">&amp;</span>nvmm_accel_type);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">type_init</span>(nvmm_type_init);
+</span></span></code></pre></div><blockquote>
+<p>Initializes nvmm machine and provides other functions to assist with code execution.</p>
+</blockquote>
+<p>and</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">nvmm_accel_ops_class_init</span>(ObjectClass <span style="color:#f92672">*</span>oc, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>data)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    AccelOpsClass <span style="color:#f92672">*</span>ops <span style="color:#f92672">=</span> <span style="color:#a6e22e">ACCEL_OPS_CLASS</span>(oc);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ops<span style="color:#f92672">-&gt;</span>create_vcpu_thread <span style="color:#f92672">=</span> nvmm_start_vcpu_thread;
+</span></span><span style="display:flex;"><span>    ops<span style="color:#f92672">-&gt;</span>kick_vcpu_thread <span style="color:#f92672">=</span> nvmm_kick_vcpu_thread;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ops<span style="color:#f92672">-&gt;</span>synchronize_post_reset <span style="color:#f92672">=</span> nvmm_cpu_synchronize_post_reset;
+</span></span><span style="display:flex;"><span>    ops<span style="color:#f92672">-&gt;</span>synchronize_post_init <span style="color:#f92672">=</span> nvmm_cpu_synchronize_post_init;
+</span></span><span style="display:flex;"><span>    ops<span style="color:#f92672">-&gt;</span>synchronize_state <span style="color:#f92672">=</span> nvmm_cpu_synchronize_state;
+</span></span><span style="display:flex;"><span>    ops<span style="color:#f92672">-&gt;</span>synchronize_pre_loadvm <span style="color:#f92672">=</span> nvmm_cpu_synchronize_pre_loadvm;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">const</span> TypeInfo nvmm_accel_ops_type <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    .name <span style="color:#f92672">=</span> <span style="color:#a6e22e">ACCEL_OPS_NAME</span>(<span style="color:#e6db74">&#34;nvmm&#34;</span>),
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    .parent <span style="color:#f92672">=</span> TYPE_ACCEL_OPS,
+</span></span><span style="display:flex;"><span>    .class_init <span style="color:#f92672">=</span> nvmm_accel_ops_class_init,
+</span></span><span style="display:flex;"><span>    .abstract <span style="color:#f92672">=</span> true,
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">nvmm_accel_ops_register_types</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">type_register_static</span>(<span style="color:#f92672">&amp;</span>nvmm_accel_ops_type);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">type_init</span>(nvmm_accel_ops_register_types);
+</span></span></code></pre></div><blockquote>
+<p>Executes the main thread for the vCPU and qemu <code>CPUState</code> and nvmm vCPU synchronization.</p>
+</blockquote>
+<h2 id="cpu-class-integration">CPU Class integration<a href="#cpu-class-integration" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>AccelCPUState. This is the core of the accelerator functionality. It features an <code>nvmm_vcpu</code>, a task priority register, and other accelerator state. Each Qemu CPU is tied to an <code>AccelCPUState</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> AccelCPUState {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> nvmm_vcpu vcpu;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">uint8_t</span> tpr;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">bool</span> stop;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">bool</span> dirty;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Window-exiting for INTs/NMIs. */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">bool</span> int_window_exit;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">bool</span> nmi_window_exit;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* The guest is in an interrupt shadow (POP SS, etc). */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">bool</span> int_shadow;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> qemu_machine {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> nvmm_capability cap;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> nvmm_machine mach;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><h3 id="vcpu-initialization">vCPU initialization<a href="#vcpu-initialization" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nvmm_init_vcpu</span>(CPUState <span style="color:#f92672">*</span>cpu)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> nvmm_machine <span style="color:#f92672">*</span>mach <span style="color:#f92672">=</span> <span style="color:#a6e22e">get_nvmm_mach</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> nvmm_vcpu_conf_cpuid cpuid;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> nvmm_vcpu_conf_tpr tpr;
+</span></span><span style="display:flex;"><span>    Error <span style="color:#f92672">*</span>local_error <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>    AccelCPUState <span style="color:#f92672">*</span>qcpu;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret, err;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">nvmm_init_cpu_signals</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Initialize AccelCPUState with glib */</span>
+</span></span><span style="display:flex;"><span>    qcpu <span style="color:#f92672">=</span> <span style="color:#a6e22e">g_new0</span>(AccelCPUState, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Create vcpu (nvmm.h) */</span>
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_vcpu_create</span>(mach, cpu<span style="color:#f92672">-&gt;</span>cpu_index, <span style="color:#f92672">&amp;</span>qcpu<span style="color:#f92672">-&gt;</span>vcpu);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>        err <span style="color:#f92672">=</span> errno;
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">error_report</span>(<span style="color:#e6db74">&#34;NVMM: Failed to create a virtual processor,&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34; error=%d&#34;</span>, err);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">g_free</span>(qcpu);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>err;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">        Set cpuid information.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">        CPUID gives software a standardized way to query processor features.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">        Leaf is just the function number passed in the EAX register before executing CPUID. Which category of information to return.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">        Mask is the bitmask that extracts the feature flags from the results.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">    */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">memset</span>(<span style="color:#f92672">&amp;</span>cpuid, <span style="color:#ae81ff">0</span>, <span style="color:#66d9ef">sizeof</span>(cpuid));
+</span></span><span style="display:flex;"><span>    cpuid.mask <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    cpuid.leaf <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x00000001</span>;
+</span></span><span style="display:flex;"><span>    cpuid.u.mask.set.edx <span style="color:#f92672">=</span> CPUID_MCE <span style="color:#f92672">|</span> CPUID_MCA <span style="color:#f92672">|</span> CPUID_MTRR;
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_vcpu_configure</span>(mach, <span style="color:#f92672">&amp;</span>qcpu<span style="color:#f92672">-&gt;</span>vcpu, NVMM_VCPU_CONF_CPUID,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&amp;</span>cpuid);
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>        err <span style="color:#f92672">=</span> errno;
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">error_report</span>(<span style="color:#e6db74">&#34;NVMM: Failed to configure a virtual processor,&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34; error=%d&#34;</span>, err);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">g_free</span>(qcpu);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>err;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Configures the callbacks (io callback, mem callback) */</span>
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_vcpu_configure</span>(mach, <span style="color:#f92672">&amp;</span>qcpu<span style="color:#f92672">-&gt;</span>vcpu, NVMM_VCPU_CONF_CALLBACKS,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&amp;</span>nvmm_callbacks);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>        err <span style="color:#f92672">=</span> errno;
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">error_report</span>(<span style="color:#e6db74">&#34;NVMM: Failed to configure a virtual processor,&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34; error=%d&#34;</span>, err);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">g_free</span>(qcpu);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>err;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Sets TPR */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (qemu_mach.cap.arch.vcpu_conf_support <span style="color:#f92672">&amp;</span> NVMM_CAP_ARCH_VCPU_CONF_TPR) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">memset</span>(<span style="color:#f92672">&amp;</span>tpr, <span style="color:#ae81ff">0</span>, <span style="color:#66d9ef">sizeof</span>(tpr));
+</span></span><span style="display:flex;"><span>        tpr.exit_changed <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_vcpu_configure</span>(mach, <span style="color:#f92672">&amp;</span>qcpu<span style="color:#f92672">-&gt;</span>vcpu, NVMM_VCPU_CONF_TPR, <span style="color:#f92672">&amp;</span>tpr);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>            err <span style="color:#f92672">=</span> errno;
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">error_report</span>(<span style="color:#e6db74">&#34;NVMM: Failed to configure a virtual processor,&#34;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34; error=%d&#34;</span>, err);
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">g_free</span>(qcpu);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>err;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Sets the CPUState accelClass to the AccelCPUState */</span>
+</span></span><span style="display:flex;"><span>    qcpu<span style="color:#f92672">-&gt;</span>dirty <span style="color:#f92672">=</span> true;
+</span></span><span style="display:flex;"><span>    cpu<span style="color:#f92672">-&gt;</span>accel <span style="color:#f92672">=</span> qcpu;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="register-synchronization">Register Synchronization<a href="#register-synchronization" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>NVMM provides functions to synchronize registers between Qemu CPUState and NVMM vCPU:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#75715e">// QEMU CPU → NVMM
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">nvmm_set_registers</span>(CPUState <span style="color:#f92672">*</span>cpu) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Transfer GPRs, RIP/RFLAGS, segments, control registers, etc.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RAX] <span style="color:#f92672">=</span> env<span style="color:#f92672">-&gt;</span>regs[R_EAX];
+</span></span><span style="display:flex;"><span>    state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RCX] <span style="color:#f92672">=</span> env<span style="color:#f92672">-&gt;</span>regs[R_ECX];
+</span></span><span style="display:flex;"><span>    state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RDX] <span style="color:#f92672">=</span> env<span style="color:#f92672">-&gt;</span>regs[R_EDX];
+</span></span><span style="display:flex;"><span>    state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RBX] <span style="color:#f92672">=</span> env<span style="color:#f92672">-&gt;</span>regs[R_EBX];
+</span></span><span style="display:flex;"><span>    state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RSP] <span style="color:#f92672">=</span> env<span style="color:#f92672">-&gt;</span>regs[R_ESP];
+</span></span><span style="display:flex;"><span>    state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RBP] <span style="color:#f92672">=</span> env<span style="color:#f92672">-&gt;</span>regs[R_EBP];
+</span></span><span style="display:flex;"><span>    state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RSI] <span style="color:#f92672">=</span> env<span style="color:#f92672">-&gt;</span>regs[R_ESI];
+</span></span><span style="display:flex;"><span>    state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RDI] <span style="color:#f92672">=</span> env<span style="color:#f92672">-&gt;</span>regs[R_EDI];
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// NVMM → QEMU CPU
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">nvmm_get_registers</span>(CPUState <span style="color:#f92672">*</span>cpu) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Transfer GPRs, RIP/RFLAGS, segments, control registers, etc.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">/* GPRs. */</span>
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">-&gt;</span>regs[R_EAX] <span style="color:#f92672">=</span> state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RAX];
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">-&gt;</span>regs[R_ECX] <span style="color:#f92672">=</span> state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RCX];
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">-&gt;</span>regs[R_EDX] <span style="color:#f92672">=</span> state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RDX];
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">-&gt;</span>regs[R_EBX] <span style="color:#f92672">=</span> state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RBX];
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">-&gt;</span>regs[R_ESP] <span style="color:#f92672">=</span> state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RSP];
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">-&gt;</span>regs[R_EBP] <span style="color:#f92672">=</span> state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RBP];
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">-&gt;</span>regs[R_ESI] <span style="color:#f92672">=</span> state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RSI];
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">-&gt;</span>regs[R_EDI] <span style="color:#f92672">=</span> state<span style="color:#f92672">-&gt;</span>gprs[NVMM_X64_GPR_RDI];
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>These functions are called when CPU State needs synchronization, after CPU reset, initialization, and before loading VM state.</p>
+<h3 id="vcpu-execution-thread">vCPU execution thread<a href="#vcpu-execution-thread" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>This is the actual thread function for each qemu CPU. <code>accel-ops-class.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">qemu_nvmm_cpu_thread_fn</span>(<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>arg)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    CPUState <span style="color:#f92672">*</span>cpu <span style="color:#f92672">=</span> arg;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> r;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">assert</span>(<span style="color:#a6e22e">nvmm_enabled</span>());
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">rcu_register_thread</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Acquire QEMU Lock */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">bql_lock</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">qemu_thread_get_self</span>(cpu<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">thread</span>);
+</span></span><span style="display:flex;"><span>    cpu<span style="color:#f92672">-&gt;</span>thread_id <span style="color:#f92672">=</span> <span style="color:#a6e22e">qemu_get_thread_id</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Set current CPU */</span>
+</span></span><span style="display:flex;"><span>    current_cpu <span style="color:#f92672">=</span> cpu;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Create vCPU */</span>
+</span></span><span style="display:flex;"><span>    r <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_init_vcpu</span>(cpu);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (r <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fprintf</span>(stderr, <span style="color:#e6db74">&#34;nvmm_init_vcpu failed: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strerror</span>(<span style="color:#f92672">-</span>r));
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">exit</span>(<span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* signal CPU creation */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">cpu_thread_signal_created</span>(cpu);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">qemu_guest_random_seed_thread_part2</span>(cpu<span style="color:#f92672">-&gt;</span>random_seed);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">do</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">cpu_can_run</span>(cpu)) {
+</span></span><span style="display:flex;"><span>            r <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_vcpu_exec</span>(cpu);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (r <span style="color:#f92672">==</span> EXCP_DEBUG) {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">cpu_handle_guest_debug</span>(cpu);
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">while</span> (<span style="color:#a6e22e">cpu_thread_is_idle</span>(cpu)) {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">/* Condition variable with BQL */</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">qemu_cond_wait_bql</span>(cpu<span style="color:#f92672">-&gt;</span>halt_cond);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">qemu_wait_io_event_common</span>(cpu);
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">while</span> (<span style="color:#f92672">!</span>cpu<span style="color:#f92672">-&gt;</span>unplug <span style="color:#f92672">||</span> <span style="color:#a6e22e">cpu_can_run</span>(cpu));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Destroy vCPU after CPU is unplugged */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">nvmm_destroy_vcpu</span>(cpu);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">cpu_thread_signal_destroyed</span>(cpu);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">bql_unlock</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">rcu_unregister_thread</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> NULL;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">nvmm_start_vcpu_thread</span>(CPUState <span style="color:#f92672">*</span>cpu)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> thread_name[VCPU_THREAD_NAME_SIZE];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">snprintf</span>(thread_name, VCPU_THREAD_NAME_SIZE, <span style="color:#e6db74">&#34;CPU %d/NVMM&#34;</span>,
+</span></span><span style="display:flex;"><span>             cpu<span style="color:#f92672">-&gt;</span>cpu_index);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Start vCPU thread */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">qemu_thread_create</span>(cpu<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">thread</span>, thread_name, qemu_nvmm_cpu_thread_fn,
+</span></span><span style="display:flex;"><span>                       cpu, QEMU_THREAD_JOINABLE);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="vcpu-execution">vCPU execution<a href="#vcpu-execution" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>The execution loop takes place in the <code>nvmm_vcpu_loop</code> function:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nvmm_vcpu_loop</span>(CPUState <span style="color:#f92672">*</span>cpu) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> nvmm_machine <span style="color:#f92672">*</span>mach <span style="color:#f92672">=</span> <span style="color:#a6e22e">get_nvmm_mach</span>();
+</span></span><span style="display:flex;"><span>    AccelCPUState <span style="color:#f92672">*</span>qcpu <span style="color:#f92672">=</span> cpu<span style="color:#f92672">-&gt;</span>accel;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> nvmm_vcpu <span style="color:#f92672">*</span>vcpu <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>qcpu<span style="color:#f92672">-&gt;</span>vcpu;
+</span></span><span style="display:flex;"><span>    X86CPU <span style="color:#f92672">*</span>x86_cpu <span style="color:#f92672">=</span> <span style="color:#a6e22e">X86_CPU</span>(cpu);
+</span></span><span style="display:flex;"><span>    CPUX86State <span style="color:#f92672">*</span>env <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>x86_cpu<span style="color:#f92672">-&gt;</span>env;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> nvmm_vcpu_exit <span style="color:#f92672">*</span>exit <span style="color:#f92672">=</span> vcpu<span style="color:#f92672">-&gt;</span>exit;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">cpu_exec_start</span>(cpu);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Inner VCPU loop.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">do</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (cpu<span style="color:#f92672">-&gt;</span>accel<span style="color:#f92672">-&gt;</span>dirty) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">nvmm_set_registers</span>(cpu);
+</span></span><span style="display:flex;"><span>            cpu<span style="color:#f92672">-&gt;</span>accel<span style="color:#f92672">-&gt;</span>dirty <span style="color:#f92672">=</span> false;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (qcpu<span style="color:#f92672">-&gt;</span>stop) {
+</span></span><span style="display:flex;"><span>            cpu<span style="color:#f92672">-&gt;</span>exception_index <span style="color:#f92672">=</span> EXCP_INTERRUPT;
+</span></span><span style="display:flex;"><span>            qcpu<span style="color:#f92672">-&gt;</span>stop <span style="color:#f92672">=</span> false;
+</span></span><span style="display:flex;"><span>            ret <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">nvmm_vcpu_pre_run</span>(cpu);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">qatomic_read</span>(<span style="color:#f92672">&amp;</span>cpu<span style="color:#f92672">-&gt;</span>exit_request)) {
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#if NVMM_USER_VERSION &gt;= 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">nvmm_vcpu_stop</span>(vcpu);
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">qemu_cpu_kick_self</span>();
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/* Read exit_request before the kernel reads the immediate exit flag */</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">smp_rmb</span>();
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_vcpu_run</span>(mach, vcpu);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">error_report</span>(<span style="color:#e6db74">&#34;NVMM: Failed to exec a virtual processor,&#34;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34; error=%d&#34;</span>, errno);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">nvmm_vcpu_post_run</span>(cpu, exit);
+</span></span><span style="display:flex;"><span>        ...
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">switch</span> (exit<span style="color:#f92672">-&gt;</span>reason) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_NONE:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#if NVMM_USER_VERSION &gt;= 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_STOPPED:
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">             * The kernel cleared the immediate exit flag; cpu-&gt;exit_request
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">             * must be cleared after
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">             */</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">smp_wmb</span>();
+</span></span><span style="display:flex;"><span>            qcpu<span style="color:#f92672">-&gt;</span>stop <span style="color:#f92672">=</span> true;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_MEMORY:
+</span></span><span style="display:flex;"><span>            ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_handle_mem</span>(mach, vcpu);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_IO:
+</span></span><span style="display:flex;"><span>            ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_handle_io</span>(mach, vcpu);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_INT_READY:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_NMI_READY:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_TPR_CHANGED:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_HALTED:
+</span></span><span style="display:flex;"><span>            ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_handle_halted</span>(mach, cpu, exit);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_SHUTDOWN:
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">qemu_system_reset_request</span>(SHUTDOWN_CAUSE_GUEST_RESET);
+</span></span><span style="display:flex;"><span>            cpu<span style="color:#f92672">-&gt;</span>exception_index <span style="color:#f92672">=</span> EXCP_INTERRUPT;
+</span></span><span style="display:flex;"><span>            ret <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_RDMSR:
+</span></span><span style="display:flex;"><span>            ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_handle_rdmsr</span>(mach, cpu, exit);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_WRMSR:
+</span></span><span style="display:flex;"><span>            ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_handle_wrmsr</span>(mach, cpu, exit);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_MONITOR:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> NVMM_VCPU_EXIT_MWAIT:
+</span></span><span style="display:flex;"><span>            ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_inject_ud</span>(mach, vcpu);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">error_report</span>(<span style="color:#e6db74">&#34;NVMM: Unexpected VM exit code 0x%lx [hw=0x%lx]&#34;</span>,
+</span></span><span style="display:flex;"><span>                exit<span style="color:#f92672">-&gt;</span>reason, exit<span style="color:#f92672">-&gt;</span>u.inv.hwcode);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The loop calls a prerun function, executes the VM in VMX mode, and returns an exitcode at <code>vmexit</code>. Then, we provide match the different exitcodes to various handlers.</p>
+<h3 id="pre-run-and-post-run">Pre-run and Post Run<a href="#pre-run-and-post-run" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>The pre-run is called before the vCPU is run. It injects events generated by the I/O thread, and synchronizes the guest TPR.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>    tpr <span style="color:#f92672">=</span> <span style="color:#a6e22e">cpu_get_apic_tpr</span>(x86_cpu<span style="color:#f92672">-&gt;</span>apic_state);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (tpr <span style="color:#f92672">!=</span> qcpu<span style="color:#f92672">-&gt;</span>tpr) {
+</span></span><span style="display:flex;"><span>        qcpu<span style="color:#f92672">-&gt;</span>tpr <span style="color:#f92672">=</span> tpr;
+</span></span><span style="display:flex;"><span>        sync_tpr <span style="color:#f92672">=</span> true;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Force the VCPU out of its inner loop to process any INIT requests
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * or commit pending TPR access.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (cpu<span style="color:#f92672">-&gt;</span>interrupt_request <span style="color:#f92672">&amp;</span> (CPU_INTERRUPT_INIT <span style="color:#f92672">|</span> CPU_INTERRUPT_TPR)) {
+</span></span><span style="display:flex;"><span>        cpu<span style="color:#f92672">-&gt;</span>exit_request <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>has_event <span style="color:#f92672">&amp;&amp;</span> (cpu<span style="color:#f92672">-&gt;</span>interrupt_request <span style="color:#f92672">&amp;</span> CPU_INTERRUPT_NMI)) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">nvmm_can_take_nmi</span>(cpu)) {
+</span></span><span style="display:flex;"><span>            cpu<span style="color:#f92672">-&gt;</span>interrupt_request <span style="color:#f92672">&amp;=</span> <span style="color:#f92672">~</span>CPU_INTERRUPT_NMI;
+</span></span><span style="display:flex;"><span>            event<span style="color:#f92672">-&gt;</span>type <span style="color:#f92672">=</span> NVMM_VCPU_EVENT_INTR;
+</span></span><span style="display:flex;"><span>            event<span style="color:#f92672">-&gt;</span>vector <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>            has_event <span style="color:#f92672">=</span> true;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>has_event <span style="color:#f92672">&amp;&amp;</span> (cpu<span style="color:#f92672">-&gt;</span>interrupt_request <span style="color:#f92672">&amp;</span> CPU_INTERRUPT_HARD)) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">nvmm_can_take_int</span>(cpu)) {
+</span></span><span style="display:flex;"><span>            cpu<span style="color:#f92672">-&gt;</span>interrupt_request <span style="color:#f92672">&amp;=</span> <span style="color:#f92672">~</span>CPU_INTERRUPT_HARD;
+</span></span><span style="display:flex;"><span>            event<span style="color:#f92672">-&gt;</span>type <span style="color:#f92672">=</span> NVMM_VCPU_EVENT_INTR;
+</span></span><span style="display:flex;"><span>            event<span style="color:#f92672">-&gt;</span>vector <span style="color:#f92672">=</span> <span style="color:#a6e22e">cpu_get_pic_interrupt</span>(env);
+</span></span><span style="display:flex;"><span>            has_event <span style="color:#f92672">=</span> true;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Don&#39;t want SMIs. */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (cpu<span style="color:#f92672">-&gt;</span>interrupt_request <span style="color:#f92672">&amp;</span> CPU_INTERRUPT_SMI) {
+</span></span><span style="display:flex;"><span>        cpu<span style="color:#f92672">-&gt;</span>interrupt_request <span style="color:#f92672">&amp;=</span> <span style="color:#f92672">~</span>CPU_INTERRUPT_SMI;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Sync TPR */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Inject event into vCPU. Event is injected at the next interrupt window */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (has_event) {
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_vcpu_inject</span>(mach, vcpu);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">error_report</span>(<span style="color:#e6db74">&#34;NVMM: Failed to inject event,&#34;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34; error=%d&#34;</span>, errno);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>The post run is called after vCPU runs (and exits). We synchronize the host view of the TPR and RFLAGS.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nvmm_vcpu_post_run</span>(CPUState <span style="color:#f92672">*</span>cpu, <span style="color:#66d9ef">struct</span> nvmm_vcpu_exit <span style="color:#f92672">*</span>exit)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    AccelCPUState <span style="color:#f92672">*</span>qcpu <span style="color:#f92672">=</span> cpu<span style="color:#f92672">-&gt;</span>accel;
+</span></span><span style="display:flex;"><span>    X86CPU <span style="color:#f92672">*</span>x86_cpu <span style="color:#f92672">=</span> <span style="color:#a6e22e">X86_CPU</span>(cpu);
+</span></span><span style="display:flex;"><span>    CPUX86State <span style="color:#f92672">*</span>env <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>x86_cpu<span style="color:#f92672">-&gt;</span>env;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">uint64_t</span> tpr;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    env<span style="color:#f92672">-&gt;</span>eflags <span style="color:#f92672">=</span> exit<span style="color:#f92672">-&gt;</span>exitstate.rflags;
+</span></span><span style="display:flex;"><span>    qcpu<span style="color:#f92672">-&gt;</span>int_shadow <span style="color:#f92672">=</span> exit<span style="color:#f92672">-&gt;</span>exitstate.int_shadow;
+</span></span><span style="display:flex;"><span>    qcpu<span style="color:#f92672">-&gt;</span>int_window_exit <span style="color:#f92672">=</span> exit<span style="color:#f92672">-&gt;</span>exitstate.int_window_exiting;
+</span></span><span style="display:flex;"><span>    qcpu<span style="color:#f92672">-&gt;</span>nmi_window_exit <span style="color:#f92672">=</span> exit<span style="color:#f92672">-&gt;</span>exitstate.nmi_window_exiting;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Synchronize TPR */</span>
+</span></span><span style="display:flex;"><span>    tpr <span style="color:#f92672">=</span> exit<span style="color:#f92672">-&gt;</span>exitstate.cr8;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (qcpu<span style="color:#f92672">-&gt;</span>tpr <span style="color:#f92672">!=</span> tpr) {
+</span></span><span style="display:flex;"><span>        qcpu<span style="color:#f92672">-&gt;</span>tpr <span style="color:#f92672">=</span> tpr;
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">bql_lock</span>();
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">cpu_set_apic_tpr</span>(x86_cpu<span style="color:#f92672">-&gt;</span>apic_state, qcpu<span style="color:#f92672">-&gt;</span>tpr);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">bql_unlock</span>();
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="machine-initialization">Machine Initialization<a href="#machine-initialization" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Qemu initializes the machine as follows:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">accel_init_machine</span>(AccelState <span style="color:#f92672">*</span>accel, MachineState <span style="color:#f92672">*</span>ms)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    ms<span style="color:#f92672">-&gt;</span>accelerator <span style="color:#f92672">=</span> accel;
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">*</span>(acc<span style="color:#f92672">-&gt;</span>allowed) <span style="color:#f92672">=</span> true;
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> acc<span style="color:#f92672">-&gt;</span><span style="color:#a6e22e">init_machine</span>(ms); <span style="color:#75715e">// Calls nvmm_accel_init()
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>The <code>init_machine</code> function is one of the defining attributes of the <code>AccelState</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nvmm_accel_init</span>(MachineState <span style="color:#f92672">*</span>ms)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret, err;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_init</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_capability</span>(<span style="color:#f92672">&amp;</span>qemu_mach.cap);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_machine_create</span>(<span style="color:#f92672">&amp;</span>qemu_mach.mach);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">memory_listener_register</span>(<span style="color:#f92672">&amp;</span>nvmm_memory_listener, <span style="color:#f92672">&amp;</span>address_space_memory);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ram_block_notifier_add</span>(<span style="color:#f92672">&amp;</span>nvmm_ram_notifier);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="map-memory">Map Memory<a href="#map-memory" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nvmm_update_mapping</span>(hwaddr start_pa, <span style="color:#66d9ef">ram_addr_t</span> size, <span style="color:#66d9ef">uintptr_t</span> hva,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">bool</span> add, <span style="color:#66d9ef">bool</span> rom, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>name)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> nvmm_machine <span style="color:#f92672">*</span>mach <span style="color:#f92672">=</span> <span style="color:#a6e22e">get_nvmm_mach</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret, prot;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (add) {
+</span></span><span style="display:flex;"><span>        prot <span style="color:#f92672">=</span> PROT_READ <span style="color:#f92672">|</span> PROT_EXEC;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>rom) {
+</span></span><span style="display:flex;"><span>            prot <span style="color:#f92672">|=</span> PROT_WRITE;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_gpa_map</span>(mach, hva, start_pa, size, prot);
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_gpa_unmap</span>(mach, hva, start_pa, size);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">error_report</span>(<span style="color:#e6db74">&#34;NVMM: Failed to %s GPA range &#39;%s&#39; PA:%p, &#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;Size:%p bytes, HostVA:%p, error=%d&#34;</span>,
+</span></span><span style="display:flex;"><span>            (add <span style="color:#f92672">?</span> <span style="color:#e6db74">&#34;map&#34;</span> <span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;unmap&#34;</span>), name, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)(<span style="color:#66d9ef">uintptr_t</span>)start_pa,
+</span></span><span style="display:flex;"><span>            (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)size, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)hva, errno);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nvmm_process_section</span>(MemoryRegionSection <span style="color:#f92672">*</span>section, <span style="color:#66d9ef">int</span> add)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    MemoryRegion <span style="color:#f92672">*</span>mr <span style="color:#f92672">=</span> section<span style="color:#f92672">-&gt;</span>mr;
+</span></span><span style="display:flex;"><span>    hwaddr start_pa <span style="color:#f92672">=</span> section<span style="color:#f92672">-&gt;</span>offset_within_address_space;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">ram_addr_t</span> size <span style="color:#f92672">=</span> <span style="color:#a6e22e">int128_get64</span>(section<span style="color:#f92672">-&gt;</span>size);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> delta;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">uintptr_t</span> hva;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span><span style="color:#a6e22e">memory_region_is_ram</span>(mr)) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Adjust start_pa and size so that they are page-aligned. */</span>
+</span></span><span style="display:flex;"><span>    delta <span style="color:#f92672">=</span> <span style="color:#a6e22e">qemu_real_host_page_size</span>() <span style="color:#f92672">-</span> (start_pa <span style="color:#f92672">&amp;</span> <span style="color:#f92672">~</span><span style="color:#a6e22e">qemu_real_host_page_mask</span>());
+</span></span><span style="display:flex;"><span>    delta <span style="color:#f92672">&amp;=</span> <span style="color:#f92672">~</span><span style="color:#a6e22e">qemu_real_host_page_mask</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (delta <span style="color:#f92672">&gt;</span> size) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    start_pa <span style="color:#f92672">+=</span> delta;
+</span></span><span style="display:flex;"><span>    size <span style="color:#f92672">-=</span> delta;
+</span></span><span style="display:flex;"><span>    size <span style="color:#f92672">&amp;=</span> <span style="color:#a6e22e">qemu_real_host_page_mask</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>size <span style="color:#f92672">||</span> (start_pa <span style="color:#f92672">&amp;</span> <span style="color:#f92672">~</span><span style="color:#a6e22e">qemu_real_host_page_mask</span>())) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    hva <span style="color:#f92672">=</span> (<span style="color:#66d9ef">uintptr_t</span>)<span style="color:#a6e22e">memory_region_get_ram_ptr</span>(mr) <span style="color:#f92672">+</span>
+</span></span><span style="display:flex;"><span>        section<span style="color:#f92672">-&gt;</span>offset_within_region <span style="color:#f92672">+</span> delta;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">nvmm_update_mapping</span>(start_pa, size, hva, add,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">memory_region_is_rom</span>(mr), mr<span style="color:#f92672">-&gt;</span>name);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nvmm_region_add</span>(MemoryListener <span style="color:#f92672">*</span>listener, MemoryRegionSection <span style="color:#f92672">*</span>section)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">memory_region_ref</span>(section<span style="color:#f92672">-&gt;</span>mr);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">nvmm_process_section</span>(section, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> MemoryListener nvmm_memory_listener <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    .name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;nvmm&#34;</span>,
+</span></span><span style="display:flex;"><span>    .begin <span style="color:#f92672">=</span> nvmm_transaction_begin,
+</span></span><span style="display:flex;"><span>    .commit <span style="color:#f92672">=</span> nvmm_transaction_commit,
+</span></span><span style="display:flex;"><span>    .region_add <span style="color:#f92672">=</span> nvmm_region_add,
+</span></span><span style="display:flex;"><span>    .region_del <span style="color:#f92672">=</span> nvmm_region_del,
+</span></span><span style="display:flex;"><span>    .log_sync <span style="color:#f92672">=</span> nvmm_log_sync,
+</span></span><span style="display:flex;"><span>    .priority <span style="color:#f92672">=</span> MEMORY_LISTENER_PRIORITY_ACCEL,
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>This object specifies how to add and delete memory regions to the guest physical space. <code>nvmm</code>, unlike <code>vmm</code> on FreeBSD, has memory allocated in userspace, and then mapped into the HVA of the virtual machine. I will dive into how this works in a later blog.</p>
+<p>System memory is allocated as such:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nvmm_ram_block_added</span>(RAMBlockNotifier <span style="color:#f92672">*</span>n, <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>host, <span style="color:#66d9ef">size_t</span> size,
+</span></span><span style="display:flex;"><span>                     <span style="color:#66d9ef">size_t</span> max_size)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> nvmm_machine <span style="color:#f92672">*</span>mach <span style="color:#f92672">=</span> <span style="color:#a6e22e">get_nvmm_mach</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">uintptr_t</span> hva <span style="color:#f92672">=</span> (<span style="color:#66d9ef">uintptr_t</span>)host;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">nvmm_hva_map</span>(mach, hva, max_size);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">error_report</span>(<span style="color:#e6db74">&#34;NVMM: Failed to map HVA, HostVA:%p &#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;Size:%p bytes, error=%d&#34;</span>,
+</span></span><span style="display:flex;"><span>            (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)hva, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)size, errno);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">struct</span> RAMBlockNotifier nvmm_ram_notifier <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    .ram_block_added <span style="color:#f92672">=</span> nvmm_ram_block_added
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div>
+      </div></div>
+
+  
+    
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        
+        <span class="button next">
+            <a href="http://localhost:1313/posts/bhyve-part-3/">
+                <span class="button__text">Bhyve Part 3</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+    
+
+  
+</article>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright">
+        <span>© 2025 Powered by <a href="https://gohugo.io">Hugo</a></span>
+    
+      <span>:: <a href="https://github.com/mirus-ua/hugo-theme-re-terminal" target="_blank">Theme</a> made by <a href="https://github.com/mirus-ua" target="_blank">Mirus</a></span>
+      </div>
+  </div>
+</footer>
+
+
+
+
+
+
+<script type="text/javascript" src="/bundle.min.js"></script>
+
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

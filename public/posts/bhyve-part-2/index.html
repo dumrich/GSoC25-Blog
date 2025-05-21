@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  
+    <title>Bhyve Part 2 :: GSoC 25: Roadmap</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Part 2 of Architectural walkthrough of FreeBSD Bhyve" />
+<meta name="keywords" content="Bhyve, FreeBSD" />
+
+  <meta name="robots" content="noodp" />
+
+<link rel="canonical" href="http://localhost:1313/posts/bhyve-part-2/" />
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  <link rel="stylesheet" href="http://localhost:1313/styles.css">
+
+
+
+
+
+
+
+  <link rel="shortcut icon" href="http://localhost:1313/img/theme-colors/orange.png">
+  <link rel="apple-touch-icon" href="http://localhost:1313/img/theme-colors/orange.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Bhyve Part 2">
+<meta property="og:description" content="Part 2 of Architectural walkthrough of FreeBSD Bhyve" />
+<meta property="og:url" content="http://localhost:1313/posts/bhyve-part-2/" />
+<meta property="og:site_name" content="GSoC 25: Roadmap" />
+
+  
+  
+  <meta property="og:image" content="http://localhost:1313/">
+
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+
+
+  <meta property="article:published_time" content="2025-05-15 11:58:06 -0400 EDT" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+</head>
+<body class="orange">
+
+
+
+
+<div class="container headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="http://localhost:1313/">
+  <div class="logo">
+    re-Terminal
+  </div>
+</a>
+
+    </div>
+    
+    
+  </div>
+  
+</header>
+
+
+  <div class="content">
+    
+<article class="post">
+  <h1 class="post-title">
+    <a href="http://localhost:1313/posts/bhyve-part-2/">Bhyve Part 2</a>
+  </h1>
+  <div class="post-meta"><time class="post-date">2025-05-15</time><span class="post-author">Abhinav Chavali</span>
+    
+</div>
+
+  
+    <span class="post-tags">
+      
+      #<a href="http://localhost:1313/tags/bhyve/">Bhyve</a>&nbsp;
+      
+      #<a href="http://localhost:1313/tags/freebsd/">FreeBSD</a>&nbsp;
+      
+    </span>
+  
+  
+
+
+
+  
+    <div class="table-of-contents">
+      <h2>
+        Table of Contents
+      </h2>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#initializing-the-platform">Initializing the Platform</a>
+      <ul>
+        <li><a href="#inout-handlers">In/out Handlers</a></li>
+        <li><a href="#kernel-emulated-device-initialization">Kernel Emulated Device Initialization</a></li>
+        <li><a href="#atkbdc-initialization"><code>atkbdc</code> initialization</a></li>
+        <li><a href="#pci-device-initialization">PCI device initialization</a></li>
+        <li><a href="#initializing-the-ioapic">Initializing the IOAPIC</a></li>
+        <li><a href="#rtc-initialization">RTC Initialization</a></li>
+        <li><a href="#sci">SCI</a></li>
+      </ul>
+    </li>
+    <li><a href="#mapping-bootrom">Mapping bootrom</a></li>
+  </ul>
+</nav>
+    </div>
+  
+
+  <div class="post-content"><div>
+        <h2 id="initializing-the-platform">Initializing the Platform<a href="#initializing-the-platform" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Next, Bhyve initializes the rest of the hardware with the bootstrap processor:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">bhyve_init_platform</span>(ctx, bsp) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">exit</span>(<span style="color:#ae81ff">4</span>);
+</span></span></code></pre></div><p>The init platform function initiates several pieces of hardware:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">bhyve_init_platform</span>(<span style="color:#66d9ef">struct</span> vmctx <span style="color:#f92672">*</span>ctx, <span style="color:#66d9ef">struct</span> vcpu <span style="color:#f92672">*</span>bsp __unused)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> error;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	error <span style="color:#f92672">=</span> <span style="color:#a6e22e">init_msr</span>();
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (error <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> (error);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">init_inout</span>();
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">kernemu_dev_init</span>();
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">atkbdc_init</span>(ctx);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pci_irq_init</span>(ctx);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ioapic_init</span>(ctx);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">rtc_init</span>(ctx);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sci_init</span>(ctx);
+</span></span><span style="display:flex;"><span>	error <span style="color:#f92672">=</span> <span style="color:#a6e22e">e820_init</span>(ctx);
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (error <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> (error);
+</span></span><span style="display:flex;"><span>	error <span style="color:#f92672">=</span> <span style="color:#a6e22e">bootrom_loadrom</span>(ctx);
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (error <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> (error);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> (<span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>In this post, we&rsquo;ll dive into each of them.</p>
+<h3 id="inout-handlers">In/out Handlers<a href="#inout-handlers" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>The <code>init_inout</code> function (amd64/inout.c) sets handlers for port mapped I/O. The <code>in</code> and <code>out</code> instructions access this space, leaving the memory bus for RAM.</p>
+<p>The CPU places a 16-bit port address on dedicated lines. Each device watches for port-address ranges (ex: PIT timer: ports 0x40-0x43). When the CPU pulses the I/O-read or I/O-write strobe, the selected device will place data on the bus (<code>in</code>), or latch data from the data bus (<code>out</code>)</p>
+<p>In Bhyve, the handlers are set as such (amd64/inout.c):</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">init_inout</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> inout_port <span style="color:#f92672">**</span>iopp, <span style="color:#f92672">*</span>iop;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	 * Set up the default handler for all ports
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">register_default_iohandler</span>(<span style="color:#ae81ff">0</span>, MAX_IOPORTS);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	 * Overwrite with specified handlers
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">SET_FOREACH</span>(iopp, inout_port_set) {
+</span></span><span style="display:flex;"><span>		iop <span style="color:#f92672">=</span> <span style="color:#f92672">*</span>iopp;
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">assert</span>(iop<span style="color:#f92672">-&gt;</span>port <span style="color:#f92672">&lt;</span> MAX_IOPORTS);
+</span></span><span style="display:flex;"><span>		inout_handlers[iop<span style="color:#f92672">-&gt;</span>port].name <span style="color:#f92672">=</span> iop<span style="color:#f92672">-&gt;</span>name;
+</span></span><span style="display:flex;"><span>		inout_handlers[iop<span style="color:#f92672">-&gt;</span>port].flags <span style="color:#f92672">=</span> iop<span style="color:#f92672">-&gt;</span>flags;
+</span></span><span style="display:flex;"><span>		inout_handlers[iop<span style="color:#f92672">-&gt;</span>port].handler <span style="color:#f92672">=</span> iop<span style="color:#f92672">-&gt;</span>handler;
+</span></span><span style="display:flex;"><span>		inout_handlers[iop<span style="color:#f92672">-&gt;</span>port].arg <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The <code>inout_port_set</code> is defined via the <code>INOUT_PORT</code> macro:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#75715e">#define	INOUT_PORT(name, port, flags, handler)				\
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	static struct inout_port __CONCAT(__inout_port, __LINE__) = {	\
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		#name,							\
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		(port),							\
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		1,							\
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		(flags),						\
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		(handler),						\
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		0							\
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	};								\
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	DATA_SET(inout_port_set, __CONCAT(__inout_port, __LINE__))
+</span></span></span></code></pre></div><h3 id="kernel-emulated-device-initialization">Kernel Emulated Device Initialization<a href="#kernel-emulated-device-initialization" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>The <code>vmm</code> kernel hypervisor that underlies Bhyve defines several devices to improve the performance of the virtual machine.</p>
+<h4 id="apic">APIC<a href="#apic" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h4>
+<p>The IOAPIC and LAPIC are critical components of the PC architecture. They allow for the management of interrupts in a multi-core environment.</p>
+<p>The LAPIC resides in each CPU core (or vCPU) to handle local interrupts and receive external interrupts routed to it.It processes interrupts delivered to its CPU via the Interrupt Vector Table.</p>
+<p>The IOAPIC is a system-wide controller that manages external interrupts from devices (disk, network) and routes them to a CPU&rsquo;s LAPIC.</p>
+<p>Example:
+Kernel issues a read to an AHCI disk. Virtual AHCI controller completes the I/O and generates an interrupt (IRQ). The interrupts is sent to the vIOAPIC.</p>
+<p>vIOAPIC receives the IRQ and checks its redirection table entry (RTE). The RTE specifies teh interrupt vector, the target vCPU, and the delivery mode. The vIOAPIC routes the interrupt to vCPU 0&rsquo;s LAPIC.</p>
+<p>The vCPU receives the interrupt vector 0x40. The LAPIC checks its state, and if the <code>EFLAGS.IF</code> is set, the interrupt is queued into the Interrupt Pending Register (IPR). If the vCPU is running, LAPIC injects the interrupt immediately. If not, it&rsquo;s delivered when the vCPU resumes.</p>
+<h4 id="hpet">HPET<a href="#hpet" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h4>
+<p>The high precision event timer (HPET) is a hardware timer that provides high resolution programmable timing for operating systems. It generates one-shot interrupts at nanosecond resolution, replacing older timers like the PIT or RTC.</p>
+<p>It can operate at a high resolution and has a MMIO interface. Interrupts are generally routed to the IOAPIC and LAPIC.</p>
+<h4 id="bhyve-initialization">Bhyve initialization<a href="#bhyve-initialization" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h4>
+<p>Kernel devices are initialized in <code>amd64/kernemu_dev.c</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">kernemu_dev_init</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> rc;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	rc <span style="color:#f92672">=</span> <span style="color:#a6e22e">register_mem</span>(<span style="color:#f92672">&amp;</span>lapic_mmio);
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (rc <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">errc</span>(<span style="color:#ae81ff">4</span>, rc, <span style="color:#e6db74">&#34;register_mem: LAPIC (0x%08x)&#34;</span>,
+</span></span><span style="display:flex;"><span>		    (<span style="color:#66d9ef">unsigned</span>)lapic_mmio.base);
+</span></span><span style="display:flex;"><span>	rc <span style="color:#f92672">=</span> <span style="color:#a6e22e">register_mem</span>(<span style="color:#f92672">&amp;</span>ioapic_mmio);
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (rc <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">errc</span>(<span style="color:#ae81ff">4</span>, rc, <span style="color:#e6db74">&#34;register_mem: IOAPIC (0x%08x)&#34;</span>,
+</span></span><span style="display:flex;"><span>		    (<span style="color:#66d9ef">unsigned</span>)ioapic_mmio.base);
+</span></span><span style="display:flex;"><span>	rc <span style="color:#f92672">=</span> <span style="color:#a6e22e">register_mem</span>(<span style="color:#f92672">&amp;</span>hpet_mmio);
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (rc <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">errc</span>(<span style="color:#ae81ff">4</span>, rc, <span style="color:#e6db74">&#34;register_mem: HPET (0x%08x)&#34;</span>,
+</span></span><span style="display:flex;"><span>		    (<span style="color:#66d9ef">unsigned</span>)hpet_mmio.base);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>A memory range is defined like this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">apic_handler</span>(<span style="color:#66d9ef">struct</span> vcpu <span style="color:#f92672">*</span>vcpu, <span style="color:#66d9ef">int</span> dir, <span style="color:#66d9ef">uint64_t</span> addr, <span style="color:#66d9ef">int</span> size,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">uint64_t</span> <span style="color:#f92672">*</span>val, <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>arg1 __unused, <span style="color:#66d9ef">long</span> arg2 __unused)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">vm_readwrite_kernemu_device</span>(vcpu, addr, (dir <span style="color:#f92672">==</span> MEM_F_WRITE),
+</span></span><span style="display:flex;"><span>	    size, val) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> (errno);
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> (<span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">struct</span> mem_range lapic_mmio <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>	.name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;kern-lapic-mmio&#34;</span>,
+</span></span><span style="display:flex;"><span>	.base <span style="color:#f92672">=</span> DEFAULT_APIC_BASE,
+</span></span><span style="display:flex;"><span>	.size <span style="color:#f92672">=</span> PAGE_SIZE,
+</span></span><span style="display:flex;"><span>	.flags <span style="color:#f92672">=</span> MEM_F_RW <span style="color:#f92672">|</span> MEM_F_IMMUTABLE,
+</span></span><span style="display:flex;"><span>	.handler <span style="color:#f92672">=</span> apic_handler,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>Bhyve uses red-black trees to organize memory regions, using per vCPU caching for performance. The <code>register_mem</code> function sets the memory region base and end into the red black tree with <code>mmio_rb_add</code>.</p>
+<h3 id="atkbdc-initialization"><code>atkbdc</code> initialization<a href="#atkbdc-initialization" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>The AT Keyboard controller sets up emulation of the PS/2 keyboard and mouse controller.</p>
+<h4 id="atkbdc">ATKBDC<a href="#atkbdc" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h4>
+<p>The ATKBDC is a legacy hardware component that interfaces the CPU with PS/2 keyboards and mice. It remains emulated for backwards compatibility. It translates key presses and mouse movements into interrupts.</p>
+<h4 id="bhyve-implementation">Bhyve implementation<a href="#bhyve-implementation" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">atkbdc_init</span>(<span style="color:#66d9ef">struct</span> vmctx <span style="color:#f92672">*</span>ctx)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bzero</span>(<span style="color:#f92672">&amp;</span>iop, <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> inout_port));
+</span></span><span style="display:flex;"><span>	iop.name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;atkdbc&#34;</span>;
+</span></span><span style="display:flex;"><span>	iop.port <span style="color:#f92672">=</span> KBD_STS_CTL_PORT;
+</span></span><span style="display:flex;"><span>	iop.size <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>	iop.flags <span style="color:#f92672">=</span> IOPORT_F_INOUT;
+</span></span><span style="display:flex;"><span>	iop.handler <span style="color:#f92672">=</span> atkbdc_sts_ctl_handler;
+</span></span><span style="display:flex;"><span>	iop.arg <span style="color:#f92672">=</span> sc;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	error <span style="color:#f92672">=</span> <span style="color:#a6e22e">register_inout</span>(<span style="color:#f92672">&amp;</span>iop);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">assert</span>(error <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bzero</span>(<span style="color:#f92672">&amp;</span>iop, <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> inout_port));
+</span></span><span style="display:flex;"><span>	iop.name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;atkdbc&#34;</span>;
+</span></span><span style="display:flex;"><span>	iop.port <span style="color:#f92672">=</span> KBD_DATA_PORT;
+</span></span><span style="display:flex;"><span>	iop.size <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>	iop.flags <span style="color:#f92672">=</span> IOPORT_F_INOUT;
+</span></span><span style="display:flex;"><span>	iop.handler <span style="color:#f92672">=</span> atkbdc_data_handler;
+</span></span><span style="display:flex;"><span>	iop.arg <span style="color:#f92672">=</span> sc;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	error <span style="color:#f92672">=</span> <span style="color:#a6e22e">register_inout</span>(<span style="color:#f92672">&amp;</span>iop);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">assert</span>(error <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>An IO device is registered similarly to before:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> (i <span style="color:#f92672">=</span> iop<span style="color:#f92672">-&gt;</span>port; i <span style="color:#f92672">&lt;</span> iop<span style="color:#f92672">-&gt;</span>port <span style="color:#f92672">+</span> iop<span style="color:#f92672">-&gt;</span>size; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>		inout_handlers[i].name <span style="color:#f92672">=</span> iop<span style="color:#f92672">-&gt;</span>name;
+</span></span><span style="display:flex;"><span>		inout_handlers[i].flags <span style="color:#f92672">=</span> iop<span style="color:#f92672">-&gt;</span>flags;
+</span></span><span style="display:flex;"><span>		inout_handlers[i].handler <span style="color:#f92672">=</span> iop<span style="color:#f92672">-&gt;</span>handler;
+</span></span><span style="display:flex;"><span>		inout_handlers[i].arg <span style="color:#f92672">=</span> iop<span style="color:#f92672">-&gt;</span>arg;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><h3 id="pci-device-initialization">PCI device initialization<a href="#pci-device-initialization" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>The PCI device IRQs are initiated as follows:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">pci_irq_init</span>(<span style="color:#66d9ef">struct</span> vmctx <span style="color:#f92672">*</span>ctx __unused)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> i;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> (i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> NPIRQS; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>		pirqs[i].reg <span style="color:#f92672">=</span> PIRQ_DIS;
+</span></span><span style="display:flex;"><span>		pirqs[i].use_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>		pirqs[i].active_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">pthread_mutex_init</span>(<span style="color:#f92672">&amp;</span>pirqs[i].lock, NULL);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> (i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> NIRQ_COUNTS; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">IRQ_PERMITTED</span>(i))
+</span></span><span style="display:flex;"><span>			irq_counts[i] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>			irq_counts[i] <span style="color:#f92672">=</span> IRQ_DISABLED;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This clears the IRQs and sets the permission for each.</p>
+<h4 id="asserting-an-irq">Asserting an IRQ<a href="#asserting-an-irq" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">pci_irq_assert</span>(<span style="color:#66d9ef">struct</span> pci_devinst <span style="color:#f92672">*</span>pi)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> pirq <span style="color:#f92672">*</span>pirq;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> pin;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	pin <span style="color:#f92672">=</span> pi<span style="color:#f92672">-&gt;</span>pi_lintr.irq.pirq_pin;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (pin <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">assert</span>(pin <span style="color:#f92672">&lt;=</span> NPIRQS);
+</span></span><span style="display:flex;"><span>		pirq <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>pirqs[pin <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>];
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">pthread_mutex_lock</span>(<span style="color:#f92672">&amp;</span>pirq<span style="color:#f92672">-&gt;</span>lock);
+</span></span><span style="display:flex;"><span>		pirq<span style="color:#f92672">-&gt;</span>active_count<span style="color:#f92672">++</span>;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> (pirq<span style="color:#f92672">-&gt;</span>active_count <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">pirq_valid_irq</span>(pirq<span style="color:#f92672">-&gt;</span>reg)) {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">vm_isa_assert_irq</span>(pi<span style="color:#f92672">-&gt;</span>pi_vmctx, pirq<span style="color:#f92672">-&gt;</span>reg <span style="color:#f92672">&amp;</span> PIRQ_IRQ,
+</span></span><span style="display:flex;"><span>			    pi<span style="color:#f92672">-&gt;</span>pi_lintr.irq.ioapic_irq);
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">pthread_mutex_unlock</span>(<span style="color:#f92672">&amp;</span>pirq<span style="color:#f92672">-&gt;</span>lock);
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">pthread_mutex_unlock</span>(<span style="color:#f92672">&amp;</span>pirq<span style="color:#f92672">-&gt;</span>lock);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">vm_ioapic_assert_irq</span>(pi<span style="color:#f92672">-&gt;</span>pi_vmctx, pi<span style="color:#f92672">-&gt;</span>pi_lintr.irq.ioapic_irq);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>If there are more than one devices currently asserting, use the IOAPIC (ISA only supports one device per INT#.</p>
+<p>Deasserting subtracts one from the active_count.</p>
+<h3 id="initializing-the-ioapic">Initializing the IOAPIC<a href="#initializing-the-ioapic" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>This function queries the IOAPIC pincount, adjusts the count to reserve the first 16 pins for legacy ISA devices, and stores the remaining pins for PCI device interrupts.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> pci_pins;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">ioapic_init</span>(<span style="color:#66d9ef">struct</span> vmctx <span style="color:#f92672">*</span>ctx)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">vm_ioapic_pincount</span>(ctx, <span style="color:#f92672">&amp;</span>pci_pins) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>		pci_pins <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/* Ignore the first 16 pins. */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (pci_pins <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">16</span>) {
+</span></span><span style="display:flex;"><span>		pci_pins <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	pci_pins <span style="color:#f92672">-=</span> <span style="color:#ae81ff">16</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="rtc-initialization">RTC Initialization<a href="#rtc-initialization" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>The <code>rtc</code> timer is another device that is implemented at the kernel level. It maintains the wall clock even when the system is powered off with a small battery. It can trigger wake up events (e.g. from sleep) at a predefined time (e.g. scheduled backups).</p>
+<p>UEFI requires the systems RTC to report guest memory size in the CMOS NVRAM. Additionally, we set the time based on the hosts <code>rtc_time()</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">rtc_init</span>(<span style="color:#66d9ef">struct</span> vmctx <span style="color:#f92672">*</span>ctx)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">size_t</span> himem;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">size_t</span> lomem;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> err;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	lomem <span style="color:#f92672">=</span> (<span style="color:#a6e22e">vm_get_lowmem_size</span>(ctx) <span style="color:#f92672">-</span> m_16MB) <span style="color:#f92672">/</span> m_64KB;
+</span></span><span style="display:flex;"><span>	err <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_rtc_write</span>(ctx, RTC_LMEM_LSB, lomem);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">assert</span>(err <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>	err <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_rtc_write</span>(ctx, RTC_LMEM_MSB, lomem <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">8</span>);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">assert</span>(err <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	himem <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_get_highmem_size</span>(ctx) <span style="color:#f92672">/</span> m_64KB;
+</span></span><span style="display:flex;"><span>	err <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_rtc_write</span>(ctx, RTC_HMEM_LSB, himem);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">assert</span>(err <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>	err <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_rtc_write</span>(ctx, RTC_HMEM_SB, himem <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">8</span>);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">assert</span>(err <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>	err <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_rtc_write</span>(ctx, RTC_HMEM_MSB, himem <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">16</span>);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">assert</span>(err <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	err <span style="color:#f92672">=</span> <span style="color:#a6e22e">vm_rtc_settime</span>(ctx, <span style="color:#a6e22e">rtc_time</span>());
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">assert</span>(err <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="sci">SCI<a href="#sci" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h3>
+<p>The ACPI SCI is a specialized hardware interrupt that allows the OS to receive notifications about power changes, thermal events, device notifications, etc.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span><span style="color:#66d9ef">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">sci_init</span>(<span style="color:#66d9ef">struct</span> vmctx <span style="color:#f92672">*</span>ctx)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	 * Mark ACPI&#39;s SCI as level trigger and bump its use count
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	 * in the PIRQ router.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pci_irq_use</span>(SCI_INT);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">vm_isa_set_irq_trigger</span>(ctx, SCI_INT, LEVEL_TRIGGER);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="mapping-bootrom">Mapping bootrom<a href="#mapping-bootrom" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/* Map the bootrom into the guest address space */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">bootrom_alloc</span>(ctx, rom_size, PROT_READ <span style="color:#f92672">|</span> PROT_EXEC,
+</span></span><span style="display:flex;"><span>	    BOOTROM_ALLOC_TOP, <span style="color:#f92672">&amp;</span>ptr, NULL) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">goto</span> done;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/* Read &#39;romfile&#39; into the guest address space */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> (i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> rom_size <span style="color:#f92672">/</span> PAGE_SIZE; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>		rlen <span style="color:#f92672">=</span> <span style="color:#a6e22e">read</span>(fd, ptr <span style="color:#f92672">+</span> i <span style="color:#f92672">*</span> PAGE_SIZE, PAGE_SIZE);
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> (rlen <span style="color:#f92672">!=</span> PAGE_SIZE) {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">EPRINTLN</span>(<span style="color:#e6db74">&#34;Incomplete read of page %d of bootrom &#34;</span>
+</span></span><span style="display:flex;"><span>			    <span style="color:#e6db74">&#34;file %s: %ld bytes&#34;</span>, i, romfile, rlen);
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">goto</span> done;
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (varfd <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>		var.mmap <span style="color:#f92672">=</span> <span style="color:#a6e22e">mmap</span>(NULL, var_size, PROT_READ <span style="color:#f92672">|</span> PROT_WRITE,
+</span></span><span style="display:flex;"><span>		    MAP_SHARED, varfd, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> (var.mmap <span style="color:#f92672">==</span> MAP_FAILED)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">goto</span> done;
+</span></span><span style="display:flex;"><span>		var.size <span style="color:#f92672">=</span> var_size;
+</span></span><span style="display:flex;"><span>		var.gpa <span style="color:#f92672">=</span> (gpa_alloctop <span style="color:#f92672">-</span> var_size) <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>		gpa_alloctop <span style="color:#f92672">=</span> var.gpa <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>		rv <span style="color:#f92672">=</span> <span style="color:#a6e22e">register_mem</span>(<span style="color:#f92672">&amp;</span>(<span style="color:#66d9ef">struct</span> mem_range){
+</span></span><span style="display:flex;"><span>		    .name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;bootrom variable&#34;</span>,
+</span></span><span style="display:flex;"><span>		    .flags <span style="color:#f92672">=</span> MEM_F_RW,
+</span></span><span style="display:flex;"><span>		    .handler <span style="color:#f92672">=</span> bootrom_var_mem_handler,
+</span></span><span style="display:flex;"><span>		    .base <span style="color:#f92672">=</span> var.gpa,
+</span></span><span style="display:flex;"><span>		    .size <span style="color:#f92672">=</span> var.size,
+</span></span><span style="display:flex;"><span>		});
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> (rv <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">goto</span> done;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><p>Part 3 covers the initialization of the machine</p>
+
+      </div></div>
+
+  
+    
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        <span class="button previous">
+            <a href="http://localhost:1313/posts/bhyve-part-3/">
+                <span class="button__icon">←</span>
+                <span class="button__text">Bhyve Part 3</span>
+            </a>
+        </span>
+        
+        
+        <span class="button next">
+            <a href="http://localhost:1313/posts/virtualization-fundamentals/">
+                <span class="button__text">Virtualization Basics</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+    
+
+  
+</article>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright">
+        <span>© 2025 Powered by <a href="https://gohugo.io">Hugo</a></span>
+    
+      <span>:: <a href="https://github.com/mirus-ua/hugo-theme-re-terminal" target="_blank">Theme</a> made by <a href="https://github.com/mirus-ua" target="_blank">Mirus</a></span>
+      </div>
+  </div>
+</footer>
+
+
+
+
+
+
+<script type="text/javascript" src="/bundle.min.js"></script>
+
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>
