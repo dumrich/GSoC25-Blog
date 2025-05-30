@@ -12,7 +12,6 @@ showFullContent = false
 readingTime = false
 hideComments = false
 color = "" #color from the theme settings
-draft = true
 +++
 
 This post will be continually updated and serve as a reference for how to use `vmm(4)` as an accelerator for QEMU.
