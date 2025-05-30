@@ -178,4 +178,4 @@ vmexit_inst_emul(struct vmctx *ctx __unused, struct vcpu *vcpu,
 	    &vme->u.inst_emul.paging);
 ```
 
-## QEMU Devices 
+## QEMU Devices
