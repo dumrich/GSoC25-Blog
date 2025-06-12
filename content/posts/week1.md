@@ -209,3 +209,27 @@ The `vm_create_devmem` creates a named memory segment for a virtual machine and 
 ...
 ```
 The mmap's map the kernel allocated memory into userspace. We first mmap an anonymous segment with some overflow regions (unmapped in GPA). Then, we map the kernel memory into the host address space.
+
+## QEMU + `vmmapi` details
+The physical memory layout on an x86_64 system looks like this:
+0x00000000 - 0x000BFFFF: 768 KB of Low RAM
+0x000C0000 - 0x000DFFFF: 128 KB of Device ROM (e.g., VGA BIOS) 
+0x000E0000 - 0x000FFFFF: 128 KB of BIOS Extension ROM
+0x00100000 - 0x7FFFFFFF: 2 GB - 1 MB of Main RAM
+0x80000000 - 0xFFFBFFFF: (Implicit) MMIO Region / Gap (Guest OS doesn't use this for general RAM)
+0xFFFC0000 - 0xFFFFFFFF: 256 KB of Main System BIOS ROM
+0x100000000 - 0x200000000: 4 GB of High RAM
+
+1) Qemu first allocates an N Gb block (where N is the size specifified by the `-m` flag. Then, the low memory and high memory segments are mapped into memory. (2Gb Low, N - 2Gb High)
+
+2) Bios is allocated (256 Kb). PCIROM is allocated (128Kb).
+
+3) Bios is mapped at 0xfffc0000 (full BIOS region). Entry point at 0xFFFF0 jumps to this full bios region mapped just below the highmem segment starts.
+
+4) Initial 2Gb section is unmapped from the GPA.
+
+5) 768Kb RAM segment is mapped at 0x00. 128kb ROM segment is mapped at 0xc0000 (Option ROM).
+
+6) 128kb out of the 256kb bios is mapped into at 0xe0000. Therefore the first 1Mb of the physical address space is occupied for mostly legacy devices.
+
+7) Finally the rest of the Lowmem Ram is mapped (again). It is mapped at 1Mb, and the size is 2Gb - 1Mb (that was already mapped).
