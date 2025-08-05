@@ -21,33 +21,59 @@ $ cd qemu/build
 $ ../configure \
   --target-list=x86_64-softmmu \
   --enable-debug \
-  --extra-cflags="-I$HOME/freebsd-src/lib/libvmmapi" \
-  --extra-ldflags="-L$HOME/vmmtest_root/usr/lib" \
-  --disable-werror
+  --disable-werror \
+  --extra-cflags="\
+-I$HOME/freebsd-src/lib/libvmmapi \
+-I/usr/obj/home/chabi/freebsd-src/amd64.amd64/sys/modules/vmm"
 $ gmake -j4
 ```
 
-This ensures that qemu will fetch the custom `vmmapi` located in $HOME/vmmtest_root/usr/lib.
+Run with following arguments:
+```C
+r -accel bhyve -smp 1 -m 2G -drive file=/home/chabi/Virt/vm0.img,format=raw -nographic 
+```
+
+or
+
+```
+r -accel bhyve -machine q35 -smp 1 -m 2G -drive file=/home/chabi/Virt/vm0.img,format=raw -nographic -drive if=pflash,format=raw,readonly=on,file=/usr/local/share/edk2-qemu/QEMU_UEFI_CODE-x86_64.fd -drive if=pflash,format=raw,file=/home/chabi/Virt/QEMU_UEFI_VARS-x86_64.fd
+```
+ or
+
+```
+r -accel bhyve -machine q35 -smp 1 -m 2G -drive file=/home/chabi/Virt/vm0.img,format=raw -nographic -drive if=pflash,format=raw,readonly=on,file=/usr/local/share/edk2-bhyve/BHYVE_UEFI.fd -drive if=pflash,format=raw,file=/home/chabi/Virt/BHYVE_UEFI_VARS.fd
+```
 
 ## `libvmmapi`
 
 ```C
+$ export MAKEOBJDIRPREFIX=/usr/obj
 $ cd $HOME/freebsd-src/lib/libvmmapi/
-$ make DEBUG_FLAGS="-g -O1 -fPIC" WITHOUT_MAN=yes all
-$ doas cp libvmmapi.a $HOME/vmmtest_root/usr/lib
+$ make \
+  MAKEOBJDIRPREFIX=/usr/obj \
+  SYSDIR=/home/chabi/freebsd-src/sys \
+  KERNCONF=GENERIC \
+  MACHINE=amd64 \
+  DEBUG=-g
+  CFLAGS=" -I/usr/obj/home/chabi/freebsd-src/amd64.amd64/sys/modules/vmm -I. -fPIC -DWITH_VMMAPI_SNAPSHOT -g"
+$ doas cp libvmmapi.so /usr/lib/libvmmapi.so
+$ doas cp libvmmapi.so.6.full /usr/lib/libvmmapi.so.6
 ```
 
 ## `vmm`
 Build new module:
 ```C
+$ export MAKEOBJDIRPREFIX=/usr/obj
 $ cd freebsd-src/sys/modules/vmm
-$ make KERNCONF=THINKBSD \
+$ make KERNCONF=GENERIC \
      KMODDIR=/boot/kernel \
      MACHINE=amd64 \
      MACHINE_ARCH=amd64 \
      SYSDIR=/home/chabi/freebsd-src/sys \
      SRCCONF=/dev/null \
-     __MAKE_CONF=/dev/null all
+     __MAKE_CONF=/dev/null \
+     DEBUG_FLAGS=-g
+     all
 ```
 
 Load new module:
